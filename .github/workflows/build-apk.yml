@@ -15,11 +15,10 @@ jobs:
       - name: Compile SynapseLang Rust Core to WASM
         run: |
           rustup target add wasm32-unknown-unknown
-          sed -i 's/wasm-bindgen = ".*"/wasm-bindgen = "=0.2.92"/' Cargo.toml
-          cargo update -p wasm-bindgen --precise 0.2.92
           cargo build --target wasm32-unknown-unknown --release
-          curl -sL https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.92/wasm-bindgen-0.2.92-x86_64-unknown-linux-musl.tar.gz | tar -xz
-          ./wasm-bindgen-0.2.92-x86_64-unknown-linux-musl/wasm-bindgen target/wasm32-unknown-unknown/release/synapselang_core.wasm --out-dir www/pkg --target web
+          WB_VER=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
+          curl -sL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WB_VER}/wasm-bindgen-${WB_VER}-x86_64-unknown-linux-musl.tar.gz" | tar -xz
+          ./wasm-bindgen-${WB_VER}-x86_64-unknown-linux-musl/wasm-bindgen target/wasm32-unknown-unknown/release/synapselang_core.wasm --out-dir www/pkg --target web
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -27,11 +26,10 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build Direct Android APK (Zero-Gradle)
+      - name: Build Direct Android APK
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/34.0.0"
-          PLATFORM="$ANDROID_HOME/platforms/android-34/android.jar"
+          BUILD_TOOLS=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+          PLATFORM=$(ls $ANDROID_HOME/platforms/*/android.jar | sort -V | tail -n 1)
 
           mkdir -p apk_build/src/com/synapselang/poc apk_build/assets apk_build/obj
           cp -r www/* apk_build/assets/
@@ -71,18 +69,11 @@ jobs:
           echo '  }' >> apk_build/src/com/synapselang/poc/MainActivity.java
           echo '}' >> apk_build/src/com/synapselang/poc/MainActivity.java
 
-          # 1. Manifest va Assets ni paketlash
           $BUILD_TOOLS/aapt2 link -o apk_build/unsigned.apk --manifest apk_build/AndroidManifest.xml -I "$PLATFORM" -A apk_build/assets --java apk_build/src
-
-          # 2. Java kodni kompilatsiya qilish va DEX ga o'girish
-          javac -source 1.8 -target 1.8 -bootclasspath "$PLATFORM" -d apk_build/obj apk_build/src/com/synapselang/poc/*.java
+          javac -source 8 -target 8 -classpath "$PLATFORM" -d apk_build/obj apk_build/src/com/synapselang/poc/*.java
           $BUILD_TOOLS/d8 apk_build/obj/com/synapselang/poc/*.class --lib "$PLATFORM" --output apk_build/
-
-          # 3. classes.dex ni APK ichiga joylash va align qilish
           cd apk_build && zip -q unsigned.apk classes.dex && cd ..
           $BUILD_TOOLS/zipalign -p -f 4 apk_build/unsigned.apk apk_build/aligned.apk
-
-          # 4. APK ni imzolash (Sign)
           keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SynapseLang,O=Android,C=US"
           $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out SynapseLang_PoC.apk apk_build/aligned.apk
 
