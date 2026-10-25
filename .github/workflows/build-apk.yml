@@ -12,15 +12,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Rust & WASM Target
-        run: |
-          rustup target add wasm32-unknown-unknown
-          cargo install wasm-bindgen-cli
-
       - name: Compile SynapseLang Rust Core to WASM
         run: |
+          rustup target add wasm32-unknown-unknown
+          sed -i 's/wasm-bindgen = "0.2"/wasm-bindgen = "=0.2.92"/' Cargo.toml
+          cargo update -p wasm-bindgen --precise 0.2.92
           cargo build --target wasm32-unknown-unknown --release
-          wasm-bindgen target/wasm32-unknown-unknown/release/synapselang_core.wasm --out-dir www/pkg --target web
+          curl -L https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.92/wasm-bindgen-0.2.92-x86_64-unknown-linux-musl.tar.gz | tar -xz
+          ./wasm-bindgen-0.2.92-x86_64-unknown-linux-musl/wasm-bindgen target/wasm32-unknown-unknown/release/synapselang_core.wasm --out-dir www/pkg --target web
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -31,17 +30,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Generate Android Wrapper & Build APK
+      - name: Generate Android Project & Build APK
         run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
           mkdir -p android_apk/app/src/main/java/com/synapselang/poc
           mkdir -p android_apk/app/src/main/assets
           cp -r www/* android_apk/app/src/main/assets/
           cd android_apk
 
-          cat << 'EOG' > settings.gradle
-          rootProject.name = "SynapseLangPoC"
-          include ':app'
-          EOG
+          printf 'rootProject.name = "SynapseLangPoC"\ninclude ":app"\n' > settings.gradle
 
           cat << 'EOG' > build.gradle
           buildscript {
@@ -65,7 +62,7 @@ jobs:
               }
               buildTypes { debug { debuggable true } }
           }
-          dependencies { implementation 'androidx.webkit:webkit:1.8.0' }
+          dependencies {}
           EOG
 
           cat << 'EOG' > app/src/main/AndroidManifest.xml
@@ -87,30 +84,32 @@ jobs:
           package com.synapselang.poc;
           import android.app.Activity;
           import android.os.Bundle;
-          import android.webkit.*;
-          import androidx.webkit.WebViewAssetLoader;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.webkit.WebChromeClient;
           public class MainActivity extends Activity {
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   WebView webView = new WebView(this);
-                  webView.getSettings().setJavaScriptEnabled(true);
-                  webView.getSettings().setDomStorageEnabled(true);
-                  final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
-                          .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this)).build();
-                  webView.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
-                          return assetLoader.shouldInterceptRequest(r.getUrl());
-                      }
-                  });
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setAllowFileAccess(true);
+                  s.setAllowFileAccessFromFileURLs(true);
+                  s.setAllowUniversalAccessFromFileURLs(true);
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.setWebChromeClient(new WebChromeClient());
                   setContentView(webView);
-                  webView.loadUrl("https://appassets.androidplatform.net/assets/index.html");
+                  webView.loadUrl("file:///android_asset/index.html");
               }
           }
           EOG
 
-          gradle assembleDebug
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O gradle.zip
+          unzip -q gradle.zip
+          ./gradle-8.2/bin/gradle assembleDebug --no-daemon
           cp app/build/outputs/apk/debug/app-debug.apk ../SynapseLang_PoC.apk
 
       - name: Upload Ready APK Artifact
