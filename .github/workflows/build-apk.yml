@@ -15,10 +15,10 @@ jobs:
       - name: Compile SynapseLang Rust Core to WASM
         run: |
           rustup target add wasm32-unknown-unknown
-          sed -i 's/wasm-bindgen = "0.2"/wasm-bindgen = "=0.2.92"/' Cargo.toml
+          sed -i 's/wasm-bindgen = ".*"/wasm-bindgen = "=0.2.92"/' Cargo.toml
           cargo update -p wasm-bindgen --precise 0.2.92
           cargo build --target wasm32-unknown-unknown --release
-          curl -L https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.92/wasm-bindgen-0.2.92-x86_64-unknown-linux-musl.tar.gz | tar -xz
+          curl -sL https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.92/wasm-bindgen-0.2.92-x86_64-unknown-linux-musl.tar.gz | tar -xz
           ./wasm-bindgen-0.2.92-x86_64-unknown-linux-musl/wasm-bindgen target/wasm32-unknown-unknown/release/synapselang_core.wasm --out-dir www/pkg --target web
 
       - name: Set up JDK 17
@@ -27,90 +27,64 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Generate Android Project & Build APK
+      - name: Build Direct Android APK (Zero-Gradle)
         run: |
-          sdkmanager "platforms;android-34" "build-tools;34.0.0"
-          mkdir -p android_apk/app/src/main/java/com/synapselang/poc
-          mkdir -p android_apk/app/src/main/assets
-          cp -r www/* android_apk/app/src/main/assets/
-          cd android_apk
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/34.0.0"
+          PLATFORM="$ANDROID_HOME/platforms/android-34/android.jar"
 
-          printf 'rootProject.name = "SynapseLangPoC"\ninclude ":app"\n' > settings.gradle
+          mkdir -p apk_build/src/com/synapselang/poc apk_build/assets apk_build/obj
+          cp -r www/* apk_build/assets/
 
-          cat << 'EOG' > build.gradle
-          buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:8.1.0' }
-          }
-          allprojects { repositories { google(); mavenCentral() } }
-          EOG
+          echo '<?xml version="1.0" encoding="utf-8"?>' > apk_build/AndroidManifest.xml
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.synapselang.poc" android:versionCode="1" android:versionName="0.1">' >> apk_build/AndroidManifest.xml
+          echo '  <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />' >> apk_build/AndroidManifest.xml
+          echo '  <uses-permission android:name="android.permission.INTERNET" />' >> apk_build/AndroidManifest.xml
+          echo '  <application android:label="SynapseLang IDE" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">' >> apk_build/AndroidManifest.xml
+          echo '    <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|keyboardHidden">' >> apk_build/AndroidManifest.xml
+          echo '      <intent-filter>' >> apk_build/AndroidManifest.xml
+          echo '        <action android:name="android.intent.action.MAIN" />' >> apk_build/AndroidManifest.xml
+          echo '        <category android:name="android.intent.category.LAUNCHER" />' >> apk_build/AndroidManifest.xml
+          echo '      </intent-filter>' >> apk_build/AndroidManifest.xml
+          echo '    </activity>' >> apk_build/AndroidManifest.xml
+          echo '  </application>' >> apk_build/AndroidManifest.xml
+          echo '</manifest>' >> apk_build/AndroidManifest.xml
 
-          cat << 'EOG' > app/build.gradle
-          apply plugin: 'com.android.application'
-          android {
-              namespace 'com.synapselang.poc'
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.synapselang.poc"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 1
-                  versionName "0.1-PoC"
-              }
-              buildTypes { debug { debuggable true } }
-          }
-          dependencies {}
-          EOG
+          echo 'package com.synapselang.poc;' > apk_build/src/com/synapselang/poc/MainActivity.java
+          echo 'import android.app.Activity;' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo 'import android.os.Bundle;' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo 'import android.webkit.*;' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo 'public class MainActivity extends Activity {' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '  @Override protected void onCreate(Bundle b) {' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    super.onCreate(b);' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    WebView w = new WebView(this);' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    WebSettings s = w.getSettings();' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    s.setJavaScriptEnabled(true);' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    s.setDomStorageEnabled(true);' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    s.setAllowFileAccess(true);' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    s.setAllowFileAccessFromFileURLs(true);' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    s.setAllowUniversalAccessFromFileURLs(true);' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    w.setWebViewClient(new WebViewClient());' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    w.setWebChromeClient(new WebChromeClient());' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    setContentView(w);' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '    w.loadUrl("file:///android_asset/index.html");' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '  }' >> apk_build/src/com/synapselang/poc/MainActivity.java
+          echo '}' >> apk_build/src/com/synapselang/poc/MainActivity.java
 
-          cat << 'EOG' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application android:label="SynapseLang IDE" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
-                  <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|keyboardHidden">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOG
+          # 1. Manifest va Assets ni paketlash
+          $BUILD_TOOLS/aapt2 link -o apk_build/unsigned.apk --manifest apk_build/AndroidManifest.xml -I "$PLATFORM" -A apk_build/assets --java apk_build/src
 
-          cat << 'EOG' > app/src/main/java/com/synapselang/poc/MainActivity.java
-          package com.synapselang.poc;
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import android.webkit.WebChromeClient;
-          public class MainActivity extends Activity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  WebView webView = new WebView(this);
-                  WebSettings s = webView.getSettings();
-                  s.setJavaScriptEnabled(true);
-                  s.setDomStorageEnabled(true);
-                  s.setAllowFileAccess(true);
-                  s.setAllowFileAccessFromFileURLs(true);
-                  s.setAllowUniversalAccessFromFileURLs(true);
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.setWebChromeClient(new WebChromeClient());
-                  setContentView(webView);
-                  webView.loadUrl("file:///android_asset/index.html");
-              }
-          }
-          EOG
+          # 2. Java kodni kompilatsiya qilish va DEX ga o'girish
+          javac -source 1.8 -target 1.8 -bootclasspath "$PLATFORM" -d apk_build/obj apk_build/src/com/synapselang/poc/*.java
+          $BUILD_TOOLS/d8 apk_build/obj/com/synapselang/poc/*.class --lib "$PLATFORM" --output apk_build/
 
-          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O gradle.zip
-          unzip -q gradle.zip
-          ./gradle-8.2/bin/gradle assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk ../SynapseLang_PoC.apk
+          # 3. classes.dex ni APK ichiga joylash va align qilish
+          cd apk_build && zip -q unsigned.apk classes.dex && cd ..
+          $BUILD_TOOLS/zipalign -p -f 4 apk_build/unsigned.apk apk_build/aligned.apk
+
+          # 4. APK ni imzolash (Sign)
+          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SynapseLang,O=Android,C=US"
+          $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out SynapseLang_PoC.apk apk_build/aligned.apk
 
       - name: Upload Ready APK Artifact
         uses: actions/upload-artifact@v4
