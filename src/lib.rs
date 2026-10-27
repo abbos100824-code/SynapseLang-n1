@@ -108,15 +108,25 @@ impl SynapseRuntime {
         self.tick_count += 1;
         self.log(format!("--- [ TICK #{} ] ---", self.tick_count));
         let mut flow_logs = Vec::new();
+
         for syn in &mut self.synapses {
-            if let Some(src) = self.nodes.get(&syn.from) {
+            // 1. Avval src ma'lumotini nusxalab, immutable borrow ni shu yerda tugatamiz
+            let src_info = self.nodes.get(&syn.from).map(|src| {
                 let threshold = *src.attrs.get("threshold").unwrap_or(&0.0);
-                if src.state.abs() > threshold {
-                    let signal = src.state * syn.weight;
+                (src.state, threshold)
+            });
+
+            // 2. Endi bemalol get_mut chaqiramiz (E0502 xatosi chiqmaydi)
+            if let Some((src_state, threshold)) = src_info {
+                if src_state.abs() > threshold {
+                    let signal = src_state * syn.weight;
                     syn.active_signal = signal;
                     if let Some(dst) = self.nodes.get_mut(&syn.to) {
                         dst.inbox += signal;
-                        flow_logs.push(format!("  {} ({:.2}) -> {} [{:+.2}]", syn.from, src.state, syn.to, signal));
+                        flow_logs.push(format!(
+                            "  {} ({:.2}) -> {} [{:+.2}]",
+                            syn.from, src_state, syn.to, signal
+                        ));
                     }
                 } else {
                     syn.active_signal = 0.0;
