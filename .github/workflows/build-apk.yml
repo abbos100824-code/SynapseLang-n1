@@ -19,6 +19,8 @@ jobs:
           WB_VER=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
           curl -sL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WB_VER}/wasm-bindgen-${WB_VER}-x86_64-unknown-linux-musl.tar.gz" | tar -xz
           ./wasm-bindgen-${WB_VER}-x86_64-unknown-linux-musl/wasm-bindgen target/wasm32-unknown-unknown/release/synapselang_core.wasm --out-dir www/pkg --target web
+          echo "window.__WASM_B64__ = '$(base64 -w 0 www/pkg/synapselang_core_bg.wasm)';" > www/wasm_b64.js
+          sed -i 's|<script src="app.js">|<script src="wasm_b64.js"></script><script src="app.js">|' www/index.html
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
