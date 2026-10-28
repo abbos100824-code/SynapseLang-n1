@@ -41,7 +41,7 @@ impl SynapseRuntime {
 
     pub fn execute_script(&mut self, script: &str) {
         let mut node_index = 0usize;
-        for (line_num, raw_line) in script.lines().enumerate() {
+        for raw_line in script.lines() {
             let line = raw_line.trim();
             if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
                 continue;
@@ -70,7 +70,7 @@ impl SynapseRuntime {
                     self.nodes.insert(id.clone(), Node {
                         id: id.clone(),
                         node_type: node_type.clone(),
-                        op: op.clone(),
+                        op,
                         match_keys,
                         reply_text,
                         task_type,
@@ -88,8 +88,8 @@ impl SynapseRuntime {
                     let (_, num_attrs) = Self::parse_brackets(line);
                     let weight = *num_attrs.get("weight").unwrap_or(&1.0);
                     self.synapses.push(Synapse {
-                        from: from.clone(),
-                        to: to.clone(),
+                        from,
+                        to,
                         weight,
                         active_signal: 0.0,
                     });
@@ -99,8 +99,8 @@ impl SynapseRuntime {
                     let val: f64 = parts[2].parse().unwrap_or(1.0);
                     if let Some(node) = self.nodes.get_mut(target) {
                         node.state += val;
-                        self.log(format!("⚡ [PULSE] '{}' <= +{:.2}", target, val));
                     }
+                    self.log(format!("⚡ [PULSE] '{}' <= +{:.2}", target, val));
                 }
                 "ask" => {
                     let query = line.strip_prefix("ask").unwrap_or("").trim().trim_matches('"');
@@ -113,7 +113,6 @@ impl SynapseRuntime {
                     }
                 }
                 _ => {
-                    // Agar foydalanuvchi terminaldan to'g'ridan-to'g'ri savol yozsa
                     self.process_text_query(line);
                 }
             }
@@ -124,7 +123,6 @@ impl SynapseRuntime {
         self.log(format!("\n🗣 [FOYDALANUVCHI]: \"{}\"", query));
         let q_lower = query.to_lowercase();
 
-        // Boss uyg'onadi
         for node in self.nodes.values_mut() {
             if node.node_type == "boss" || node.node_type == "router" {
                 node.state = 5.0;
@@ -144,7 +142,6 @@ impl SynapseRuntime {
             }
         }
 
-        // Hebbian Learning: faol agentning Boss bilan sinapsini kuchaytirish
         for syn in &mut self.synapses {
             if matched_ids.contains(&syn.to) {
                 syn.weight = (syn.weight + 0.05).min(2.0);
@@ -152,13 +149,15 @@ impl SynapseRuntime {
             }
         }
 
-        // Agentlar vazifani bajaradi va javob qaytaradi
+        let total_nodes = self.nodes.len();
+        let next_tick = self.tick_count + 1;
         let mut replies = Vec::new();
+
         for id in &matched_ids {
-            if let Some(node) = self.nodes.get_mut(id) {
+            if let Some(node) = self.nodes.get(id) {
                 let extra = match node.task_type.as_str() {
                     "calc" => Self::eval_math(&q_lower),
-                    "automonitor" => format!(" [Faol tugunlar: {}, Davr: #{}]", self.nodes.len(), self.tick_count + 1),
+                    "automonitor" => format!(" [Faol tugunlar: {}, Davr: #{}]", total_nodes, next_tick),
                     _ => String::new(),
                 };
                 if !node.reply_text.is_empty() || !extra.is_empty() {
@@ -169,7 +168,7 @@ impl SynapseRuntime {
         }
 
         if replies.is_empty() {
-            self.log("🤖 [Boss]: Bu mavzu bo'yicha mos Agent topilmadi, signal umumiy tarmoqqa uzatildi.".into());
+            self.log("🤖 [Boss]: Mos Agent topilmadi, impuls tarmoqqa uzatildi.".into());
         } else {
             for r in replies {
                 self.ai_replies.push(r.clone());
