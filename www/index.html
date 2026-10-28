@@ -39,8 +39,8 @@
 </header>
 <div id="view-editor" class="view active">
   <div class="toolbar">
-    <button class="chip" onclick="loadTemplate('smart_assistant')">🤖 1. Aqlli Chat & Avto-Agent</button>
-    <button class="chip" onclick="loadTemplate('boss_team')">🧠 2. Boss & Team</button>
+    <button class="chip" onclick="loadTemplate('smart_assistant')">🤖 1. Aqlli Chat &amp; Avto-Agent</button>
+    <button class="chip" onclick="loadTemplate('boss_team')">🧠 2. Boss &amp; Team</button>
     <button class="chip" onclick="loadTemplate('oscillator')">🔄 3. Siklik Ong</button>
     <button class="chip" onclick="newCustomFile()">➕ Yangi (.syn)</button>
   </div>
@@ -48,9 +48,9 @@
     <button class="qkey" onclick="insertText('node ')">node</button>
     <button class="qkey" onclick="insertText('synapse ')">synapse</button>
     <button class="qkey" onclick="insertText(' -> ')">-&gt;</button>
-    <button class="qkey" onclick="insertText('ask \"\"')">ask</button>
-    <button class="qkey" onclick="insertText('[type=worker, match=salom, reply=\"Salom!\"]')">[match/reply]</button>
-    <button class="qkey" onclick="insertText('run 2\n')">run</button>
+    <button class="qkey" onclick="insertText('ask ')">ask</button>
+    <button class="qkey" onclick="insertText('[type=worker, match=salom, reply=Salom!]')">[match/reply]</button>
+    <button class="qkey" onclick="insertText('run 2')">run</button>
   </div>
   <textarea id="editor" spellcheck="false"></textarea>
 </div>
@@ -74,7 +74,7 @@
 </div>
 <nav>
   <button class="nav-btn active" onclick="switchTab('editor', this)">📝 Editor</button>
-  <button class="nav-btn" onclick="switchTab('terminal', this)">💬 Chat & Terminal</button>
+  <button class="nav-btn" onclick="switchTab('terminal', this)">💬 Chat &amp; Terminal</button>
   <button class="nav-btn" onclick="switchTab('3d', this)">🌐 3D Ong</button>
 </nav>
 <script type="module">

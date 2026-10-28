@@ -37,7 +37,7 @@ jobs:
           cp -r www/* apk_build/assets/
 
           echo '<?xml version="1.0" encoding="utf-8"?>' > apk_build/AndroidManifest.xml
-          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.synapselang.poc" android:versionCode="1" android:versionName="0.1">' >> apk_build/AndroidManifest.xml
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.synapselang.poc" android:versionCode="2" android:versionName="0.2">' >> apk_build/AndroidManifest.xml
           echo '  <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />' >> apk_build/AndroidManifest.xml
           echo '  <uses-permission android:name="android.permission.INTERNET" />' >> apk_build/AndroidManifest.xml
           echo '  <application android:label="SynapseLang IDE" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">' >> apk_build/AndroidManifest.xml
