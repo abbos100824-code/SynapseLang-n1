@@ -3,90 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SynapseLang IDE v0.2</title>
+<title>SynapseLang Studio v1.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-  :root { --bg:#0b0f19; --panel:#111827; --border:#1f2937; --accent:#00f0ff; --text:#e5e7eb; }
+  :root { --bg:#070b14; --panel:#0f172a; --border:#1e293b; --accent:#00f0ff; --green:#10b981; --text:#e2e8f0; }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { background:var(--bg); color:var(--text); font-family:system-ui,sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
-  header { background:var(--panel); border-bottom:1px solid var(--border); padding:10px 14px; display:flex; justify-content:space-between; align-items:center; }
-  .logo { font-weight:800; font-size:15px; color:var(--accent); }
+  header { background:var(--panel); border-bottom:1px solid var(--border); padding:9px 12px; display:flex; justify-content:space-between; align-items:center; }
+  .logo { font-weight:800; font-size:14px; color:var(--accent); display:flex; align-items:center; gap:6px; }
   .badge { font-size:10px; background:#064e3b; color:#34d399; padding:2px 6px; border-radius:4px; }
-  .run-btn { background:#00f0ff; color:#000; border:none; padding:8px 16px; border-radius:6px; font-weight:800; }
+  .run-btn { background:var(--accent); color:#000; border:none; padding:7px 14px; border-radius:6px; font-weight:800; font-size:12px; }
   .view { display:none; flex:1; flex-direction:column; overflow:hidden; position:relative; }
   .view.active { display:flex; }
-  .toolbar, .quick-keys { background:#0f172a; padding:7px; display:flex; gap:6px; overflow-x:auto; border-bottom:1px solid var(--border); }
-  .chip, .qkey { background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:5px 10px; border-radius:6px; font-size:11px; white-space:nowrap; }
-  #editor { flex:1; width:100%; background:var(--bg); color:#a5f3fc; font-family:monospace; font-size:13.5px; padding:12px; border:none; outline:none; resize:none; }
-  #terminal-out { flex:1; background:#05080f; color:#10b981; font-family:monospace; font-size:12.5px; padding:12px; overflow-y:auto; white-space:pre-wrap; }
-  .term-bar { display:flex; background:var(--panel); padding:8px; gap:8px; }
-  .term-bar input { flex:1; background:#0b0f19; border:1px solid var(--border); color:#fff; padding:8px; border-radius:4px; }
-  .term-bar button { background:#00f0ff; color:#000; border:none; padding:0 14px; border-radius:4px; font-weight:bold; }
-  #canvas-container { flex:1; width:100%; height:100%; background:#070a12; }
-  .hud { position:absolute; top:12px; left:12px; background:rgba(17,24,39,0.88); padding:8px 12px; border-radius:8px; font-size:11px; pointer-events:none; max-width:85%; }
-  .hud-reply { color:#ffbe0b; font-weight:bold; margin-top:4px; }
-  .hud-btns { position:absolute; bottom:16px; right:16px; display:flex; gap:8px; }
-  .hud-btn { background:rgba(0,240,255,0.15); border:1px solid var(--accent); color:var(--accent); padding:8px 12px; border-radius:8px; font-size:12px; font-weight:bold; }
-  nav { background:var(--panel); border-top:1px solid var(--border); display:flex; height:54px; }
-  .nav-btn { flex:1; background:none; border:none; color:#9ca3af; font-size:12px; font-weight:600; }
+  .proj-bar { background:#0b1120; padding:7px 10px; display:flex; gap:6px; align-items:center; border-bottom:1px solid var(--border); }
+  .proj-bar select { flex:1; background:#1e293b; color:#fff; border:1px solid #334155; padding:6px 8px; border-radius:6px; font-size:12px; outline:none; }
+  .pbtn { background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:600; white-space:nowrap; }
+  .pbtn.new { background:#065f46; color:#a7f3d0; border-color:#059669; }
+  .quick-keys { background:#0f172a; padding:6px 8px; display:flex; gap:5px; overflow-x:auto; border-bottom:1px solid var(--border); }
+  .qkey { background:#1e293b; color:#93c5fd; border:1px solid #334155; padding:4px 9px; border-radius:5px; font-size:11px; font-family:monospace; white-space:nowrap; }
+  #editor { flex:1; width:100%; background:var(--bg); color:#a5f3fc; font-family:monospace; font-size:13px; line-height:1.45; padding:12px; border:none; outline:none; resize:none; }
+  #terminal-out { flex:1; background:#04070d; color:#10b981; font-family:monospace; font-size:12px; line-height:1.45; padding:12px; overflow-y:auto; white-space:pre-wrap; }
+  .term-bar { display:flex; background:var(--panel); padding:8px; gap:8px; border-top:1px solid var(--border); }
+  .term-bar input { flex:1; background:#070b14; border:1px solid var(--border); color:#fff; padding:8px 10px; border-radius:5px; font-family:monospace; font-size:12px; }
+  .term-bar button { background:var(--green); color:#000; border:none; padding:0 14px; border-radius:5px; font-weight:800; font-size:12px; }
+  #canvas-container { flex:1; width:100%; height:100%; background:#050811; }
+  .hud { position:absolute; top:10px; left:10px; background:rgba(15,23,42,0.9); border:1px solid var(--border); padding:9px 12px; border-radius:8px; font-size:11px; pointer-events:none; max-width:90%; }
+  .hud-sub { color:#38bdf8; margin-top:4px; font-family:monospace; }
+  .legend { position:absolute; bottom:62px; left:10px; background:rgba(15,23,42,0.85); padding:6px 10px; border-radius:6px; font-size:10px; pointer-events:none; }
+  .hud-btns { position:absolute; bottom:12px; right:12px; display:flex; gap:8px; }
+  .hud-btn { background:rgba(0,240,255,0.15); border:1px solid var(--accent); color:var(--accent); padding:8px 12px; border-radius:7px; font-size:11.5px; font-weight:700; }
+  nav { background:var(--panel); border-top:1px solid var(--border); display:flex; height:52px; }
+  .nav-btn { flex:1; background:none; border:none; color:#94a3b8; font-size:12px; font-weight:600; }
   .nav-btn.active { color:var(--accent); border-top:2px solid var(--accent); }
 </style>
 </head>
 <body>
 <header>
-  <div class="logo">⚡ SynapseLang <span class="badge" id="engine-status">Rust Core v0.2</span></div>
-  <button class="run-btn" onclick="executeCode(true)">▶ RUN</button>
+  <div class="logo">🧠 SynapseLang <span class="badge" id="engine-status">Neural Core v1.0</span></div>
+  <button class="run-btn" onclick="compileAndRun(true)">▶ QURISH &amp; O'QITISH</button>
 </header>
+
 <div id="view-editor" class="view active">
-  <div class="toolbar">
-    <button class="chip" onclick="loadTemplate('smart_assistant')">🤖 1. Aqlli Chat &amp; Avto-Agent</button>
-    <button class="chip" onclick="loadTemplate('boss_team')">🧠 2. Boss &amp; Team</button>
-    <button class="chip" onclick="loadTemplate('oscillator')">🔄 3. Siklik Ong</button>
-    <button class="chip" onclick="newCustomFile()">➕ Yangi (.syn)</button>
+  <div class="proj-bar">
+    <select id="project-select" onchange="selectProject(this.value)"></select>
+    <button class="pbtn new" onclick="createNewProject()">+ Yangi Loyiha</button>
+    <button class="pbtn" onclick="saveCurrentProject()">💾 Saqlash</button>
+    <button class="pbtn" onclick="deleteCurrentProject()">🗑️</button>
   </div>
   <div class="quick-keys">
-    <button class="qkey" onclick="insertText('node ')">node</button>
-    <button class="qkey" onclick="insertText('synapse ')">synapse</button>
-    <button class="qkey" onclick="insertText(' -> ')">-&gt;</button>
-    <button class="qkey" onclick="insertText('ask ')">ask</button>
-    <button class="qkey" onclick="insertText('[type=worker, match=salom, reply=Salom!]')">[match/reply]</button>
-    <button class="qkey" onclick="insertText('run 2')">run</button>
+    <button class="qkey" onclick="ins('block Nomi [x=0, y=0, z=0]\n')">block</button>
+    <button class="qkey" onclick="ins('gate G1 [block=Nomi, act=sigmoid, bias=random]\n')">gate</button>
+    <button class="qkey" onclick="ins('path A -> B [w=random]\n')">path -&gt;</button>
+    <button class="qkey" onclick="ins('tract BlockA => BlockB [w=random]\n')">tract =&gt;</button>
+    <button class="qkey" onclick="ins('freeze BlockNomi\n')">freeze</button>
+    <button class="qkey" onclick="ins('unfreeze BlockNomi\n')">unfreeze</button>
+    <button class="qkey" onclick="ins('data X1=1, X2=0 => Y1=1\n')">data</button>
+    <button class="qkey" onclick="ins('train [epochs=400, lr=0.5]\n')">train</button>
+    <button class="qkey" onclick="ins('test X1=1, X2=0\n')">test</button>
   </div>
-  <textarea id="editor" spellcheck="false"></textarea>
+  <textarea id="editor" spellcheck="false" placeholder="# Yangi neyron arxitekturangizni shu yerga yozing..."></textarea>
 </div>
+
 <div id="view-terminal" class="view">
-  <div id="terminal-out">SynapseLang Terminal v0.2 tayyor...</div>
+  <div id="terminal-out">SynapseLang Neyron Kompilyatori va O'qitish Terminali tayyor...</div>
   <div class="term-bar">
-    <input type="text" id="term-cmd" placeholder="Matn yozing: salom, hisob 25 * 4, avto tekshir..." />
-    <button onclick="runTerminalCmd()">Yuborish</button>
+    <input type="text" id="term-cmd" placeholder="Buyruq: test X1=1, X2=1 yoki train [epochs=300, lr=0.5]" />
+    <button onclick="runTerminalCommand()">Bajarish</button>
   </div>
 </div>
+
 <div id="view-3d" class="view">
   <div id="canvas-container"></div>
   <div class="hud">
-    <div id="hud-stats">Tugunlar: 0 | Sinapslar: 0</div>
-    <div id="hud-reply" class="hud-reply"></div>
+    <div id="hud-title" style="font-weight:800;color:#00f0ff;">Loyiha: —</div>
+    <div id="hud-stats">Bo'laklar: 0 | Darvozalar: 0 | Yo'laklar: 0</div>
+    <div id="hud-loss" class="hud-sub">O'qitish xatoligi (Loss): —</div>
   </div>
+  <div class="legend">🟢 Qo'zg'atuvchi yo'lak (+w) &nbsp;|&nbsp; 🔴 Tormozlovchi yo'lak (-w) &nbsp;|&nbsp; 📦 Miya bo'lagi</div>
   <div class="hud-btns">
-    <button class="hud-btn" onclick="stepFrom3D()">⚡ +1 Impuls</button>
-    <button class="hud-btn" id="auto-btn" onclick="toggleAutoPulse()">🔄 Avto-Agent</button>
+    <button class="hud-btn" onclick="trainMoreFrom3D()">🎓 +200 Epoch O'qitish</button>
   </div>
 </div>
+
 <nav>
-  <button class="nav-btn active" onclick="switchTab('editor', this)">📝 Editor</button>
-  <button class="nav-btn" onclick="switchTab('terminal', this)">💬 Chat &amp; Terminal</button>
-  <button class="nav-btn" onclick="switchTab('3d', this)">🌐 3D Ong</button>
+  <button class="nav-btn active" onclick="switchTab('editor', this)">📝 Loyiha &amp; Kod</button>
+  <button class="nav-btn" onclick="switchTab('terminal', this)">💻 Terminal &amp; Sinov</button>
+  <button class="nav-btn" onclick="switchTab('3d', this)">🌐 3D Miya Modeli</button>
 </nav>
+
 <script type="module">
   import init, { run_synapse_script } from './pkg/synapselang_core.js';
   const b64 = window.__WASM_B64__;
-  const wasmPromise = b64
-    ? init(Uint8Array.from(atob(b64), c => c.charCodeAt(0)))
-    : init();
-  wasmPromise.then(() => {
-    window.rustExecute = (c) => JSON.parse(run_synapse_script(c));
-    document.getElementById('engine-status').innerText = 'Rust WASM v0.2';
-    executeCode(false);
+  const p = b64 ? init(Uint8Array.from(atob(b64), c => c.charCodeAt(0))) : init();
+  p.then(() => {
+    window.rustExecute = (code) => JSON.parse(run_synapse_script(code));
+    document.getElementById('engine-status').innerText = 'Rust WASM v1.0';
+    compileAndRun(false);
   }).catch(() => {});
 </script>
 <script src="app.js"></script>
